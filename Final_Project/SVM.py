@@ -3,18 +3,22 @@
 import numpy as np
 from quadprog_wrapper import solve_quadprog
 
-def linear_kernel(row_data, col_data):
+def polynomial_kernel(row_data, col_data, order):
     """
-    Compute the Gram matrix between row_data and col_data for the linear kernel.
+    Compute the Gram matrix between row_data and col_data for the polynomial kernel.
 
-    :param row_data: ndarray of shape (2, m), where each column is a data example #this comment is incorrect
+    :param row_data: ndarray of shape (2, m), where each column is a data example
     :type row_data: ndarray
     :param col_data: ndarray of shape (2, n), where each column is a data example
     :type col_data: ndarray
+    :param order: scalar quantity is the order of the polynomial (the maximum exponent)
+    :type order: float
     :return: a matrix whose (i, j) entry is the kernel value between row_data[:, i] and col_data[:, j]
     :rtype: ndarray
     """
-    return row_data.T.dot(col_data) #flipped the transpose as each row is a data example
+    # Implement the polynomial kernel
+    return np.power(np.dot(row_data.T, col_data) + 1, order)
+    
 
 def rbf_kernel(row_data, col_data, sigma):
     """
@@ -29,14 +33,26 @@ def rbf_kernel(row_data, col_data, sigma):
     :return: a matrix whose (i, j) entry is the kernel value between row_data[:, i] and col_data[:, j]
     :rtype: ndarray
     """
-    #############################################
-    # TODO: Insert your code below to implement the RBF kernel.     
-    # This computation should take around 1--3 lines of code if you use matrix operations.
-    # One hint on how to accomplish this is the fact that for vectors x, y:
-    # (x - y).dot(x - y) = x.dot(x) + y.dot(y) - 2 * x.dot(y)
-    #print(np.diag(col_data.T.dot(col_data)).reshape(-1,1).T.shape)
-    return np.exp((-1/(2*sigma**2))*(np.diag(col_data.T.dot(col_data)).reshape(-1,1).T + (np.diag(row_data.T.dot(row_data)).reshape(-1,1) - (2*row_data.T.dot(col_data))[:,:])[:,:]))
+    # Implement RBF kernel
+    coefficient = -1/(2 * sigma ** 2)
+    term_one = np.sum(row_data ** 2, 0, keepdims=True).T
+    term_two = np.sum(col_data ** 2, 0, keepdims=True)
+    term_three = -2 * row_data.T.dot(col_data)
+    
+    return np.exp(coefficient * (term_one + term_two + term_three))
 
+def linear_kernel(row_data, col_data):
+    """
+    Compute the Gram matrix between row_data and col_data for the linear kernel.
+
+    :param row_data: ndarray of shape (2, m), where each column is a data example
+    :type row_data: ndarray
+    :param col_data: ndarray of shape (2, n), where each column is a data example
+    :type col_data: ndarray
+    :return: a matrix whose (i, j) entry is the kernel value between row_data[:, i] and col_data[:, j]
+    :rtype: ndarray
+    """
+    return row_data.T.dot(col_data)
 
 def kernel_svm_train(data, labels, params):
     """
