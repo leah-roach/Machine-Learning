@@ -68,7 +68,6 @@ def kernel_svm_train(data, labels, params):
     :return: learned SVM model containing 'support_vectors', 'sv_labels', 'alphas', 'params'
     :rtype: dict
     """
-
     if params['kernel'] == 'rbf':
         gram_matrix = rbf_kernel(data, data, params['sigma'])
     elif params['kernel'] == 'polynomial':
