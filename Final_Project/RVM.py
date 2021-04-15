@@ -1,6 +1,7 @@
 #File for SVM code
 #Pretty much copied and pasted the code from kernelsvm.py
 import numpy as np
+from linearclassifier import log_reg_train
 from quadprog_wrapper import solve_quadprog
 
 def polynomial_kernel(row_data, col_data, order):
@@ -151,12 +152,6 @@ def kernel_rvm_predict(data, model):
     scores = gram_matrix.dot(
         model['alphas'] * model['sv_labels']) + model['bias']
     scores = scores.ravel()
-    
-    
-    model2 = {'weights': np.zeros((num_dim, num_classes))}
-    
-    model2 = log_reg_train(scores.reshape(1,-1), train_labels, model2)
-        
     #train_predictions = linear_predict(train_data, model)
     #train_accuracy = np.sum(train_predictions == train_labels) / num_train
 
@@ -167,10 +162,11 @@ def kernel_rvm_predict(data, model):
     #print("Test Accuracy: %f" % test_accuracy)
 
 
-    return scores, model2
+    return scores
 
 def log_reg(scores, labels):
-    model2 = {'weights': np.zeros((num_dim, num_classes))}
+    num_dim, num_classes = scores.reshape(1,-1).shape
+    model2 = {'weights': np.ones((num_dim, 2))}
     model2 = log_reg_train(scores.reshape(1,-1), labels, model2)
     return model2
         
