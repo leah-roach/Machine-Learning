@@ -1,92 +1,130 @@
 import numpy as np
-from numpy import linalg
-import cvxopt
-import cvxopt.solvers
-             
-def linear_kernel(x1, x2):
-    return np.dot(x1, x2)
 
-def polynomial_kernel(x, y, p=5):
-    return (1 + np.dot(x, y)) ** p
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.utils import check_random_state
+from sklearn.preprocessing import LabelEncoder
 
-def gaussian_kernel(x, y, sigma=5.0):
-    return np.exp(-linalg.norm(x-y)**2 / (2 * (sigma ** 2)))
 
-class SVM(object):
+def projection_simplex(v, z=1):
+    """
+    Projection onto the simplex:
+        w^* = argmin_w 0.5 ||w-v||^2 s.t. \sum_i w_i = z, w_i >= 0
+    """
+    # For other algorithms computing the same projection, see
+    # https://gist.github.com/mblondel/6f3b7aaad90606b98f71
+    n_features = v.shape[0]
+    u = np.sort(v)[::-1]
+    cssv = np.cumsum(u) - z
+    ind = np.arange(n_features) + 1
+    cond = u - cssv / ind > 0
+    rho = ind[cond][-1]
+    theta = cssv[cond][-1] / float(rho)
+    w = np.maximum(v - theta, 0)
+    return w
 
-    def __init__(self, kernel=polynomial_kernel, C=None):
-        self.kernel = kernel
+
+class MulticlassSVM(BaseEstimator, ClassifierMixin):
+
+    def __init__(self, C=1, max_iter=50, tol=0.05,
+                 random_state=None, verbose=0):
         self.C = C
-        if self.C is not None: self.C = float(self.C)
+        self.max_iter = max_iter
+        self.tol = tol,
+        self.random_state = random_state
+        self.verbose = verbose
+
+    def _partial_gradient(self, X, y, i):
+        # Partial gradient for the ith sample.
+        g = np.dot(X[i], self.coef_.T) + 1
+        g[y[i]] -= 1
+        return g
+
+    def _violation(self, g, y, i):
+        # Optimality violation for the ith sample.
+        smallest = np.inf
+        for k in range(g.shape[0]):
+            if k == y[i] and self.dual_coef_[k, i] >= self.C:
+                continue
+            elif k != y[i] and self.dual_coef_[k, i] >= 0:
+                continue
+
+            smallest = min(smallest, g[k])
+
+        return g.max() - smallest
+
+    def _solve_subproblem(self, g, y, norms, i):
+        # Prepare inputs to the projection.
+        Ci = np.zeros(g.shape[0])
+        Ci[y[i]] = self.C
+        beta_hat = norms[i] * (Ci - self.dual_coef_[:, i]) + g / norms[i]
+        z = self.C * norms[i]
+
+        # Compute projection onto the simplex.
+        beta = projection_simplex(beta_hat, z)
+
+        return Ci - self.dual_coef_[:, i] - beta / norms[i]
 
     def fit(self, X, y):
         n_samples, n_features = X.shape
 
-        y = y.astype('float')
-        # Gram matrix
-        K = np.zeros((n_samples, n_samples))
-        for i in range(n_samples):
-            for j in range(n_samples):
-                K[i,j] = self.kernel(X[i], X[j])
+        # Normalize labels.
+        self._label_encoder = LabelEncoder()
+        y = self._label_encoder.fit_transform(y)
 
-        P = cvxopt.matrix(np.outer(y,y) * K)
-        q = cvxopt.matrix(np.ones(n_samples) * -1)
-        A = cvxopt.matrix(y, (1,n_samples))
-        b = cvxopt.matrix(0.0)
+        # Initialize primal and dual coefficients.
+        n_classes = len(self._label_encoder.classes_)
+        self.dual_coef_ = np.zeros((n_classes, n_samples), dtype=np.float64)
+        self.coef_ = np.zeros((n_classes, n_features))
 
-        if self.C is None:
-            G = cvxopt.matrix(np.diag(np.ones(n_samples) * -1))
-            h = cvxopt.matrix(np.zeros(n_samples))
-        else:
-            tmp1 = np.diag(np.ones(n_samples) * -1)
-            tmp2 = np.identity(n_samples)
-            G = cvxopt.matrix(np.vstack((tmp1, tmp2)))
-            tmp1 = np.zeros(n_samples)
-            tmp2 = np.ones(n_samples) * self.C
-            h = cvxopt.matrix(np.hstack((tmp1, tmp2)))
+        # Pre-compute norms.
+        norms = np.sqrt(np.sum(X ** 2, axis=1))
 
-        # solve QP problem
-        solution = cvxopt.solvers.qp(P, q, G, h, A, b, kktsolver='ldl', options={'kktreg':1e-9})
+        # Shuffle sample indices.
+        rs = check_random_state(self.random_state)
+        ind = np.arange(n_samples)
+        rs.shuffle(ind)
 
-        # Lagrange multipliers
-        a = np.ravel(solution['x'])
+        violation_init = None
+        for it in range(self.max_iter):
+            violation_sum = 0
 
-        # Support vectors have non zero lagrange multipliers
-        sv = a > 1e-5
-        ind = np.arange(len(a))[sv]
-        self.a = a[sv]
-        self.sv = X[sv]
-        self.sv_y = y[sv]
-        print("%d support vectors out of %d points" % (len(self.a), n_samples))
+            for ii in range(n_samples):
+                i = ind[ii]
 
-        # Intercept
-        self.b = 0
-        for n in range(len(self.a)):
-            self.b += self.sv_y[n]
-            self.b -= np.sum(self.a * self.sv_y * K[ind[n],sv])
-        self.b /= len(self.a)
+                # All-zero samples can be safely ignored.
+                if norms[i] == 0:
+                    continue
 
-        # Weight vector
-        if self.kernel == linear_kernel:
-            self.w = np.zeros(n_features)
-            for n in range(len(self.a)):
-                self.w += self.a[n] * self.sv_y[n] * self.sv[n]
-        else:
-            self.w = None
+                g = self._partial_gradient(X, y, i)
+                v = self._violation(g, y, i)
+                violation_sum += v
 
-    def project(self, X):
-        print(self.w)
-        if self.w is not None:
-            return np.dot(X, self.w) + self.b
-        else:
-            y_predict = np.zeros(len(X))
-            for i in range(len(X)):
-                s = 0
-                for a, sv_y, sv in zip(self.a, self.sv_y, self.sv):
-                    s += a * sv_y * self.kernel(X[i], sv)
-                y_predict[i] = s
-                print(y_predict[i])
-            return y_predict + self.b
+                if v < 1e-12:
+                    continue
+
+                # Solve subproblem for the ith sample.
+                delta = self._solve_subproblem(g, y, norms, i)
+
+                # Update primal and dual coefficients.
+                self.coef_ += (delta * X[i][:, np.newaxis]).T
+                self.dual_coef_[:, i] += delta
+
+            if it == 0:
+                violation_init = violation_sum
+
+            vratio = violation_sum / violation_init
+
+            if self.verbose >= 1:
+                print("iter", it + 1, "violation", vratio)
+
+            if vratio < self.tol:
+                if self.verbose >= 1:
+                    print("Converged")
+                break
+
+        return self
 
     def predict(self, X):
-        return np.sign(self.project(X))
+        decision = np.dot(X, self.coef_.T)
+        pred = decision.argmax(axis=1)
+        return self._label_encoder.inverse_transform(pred)
