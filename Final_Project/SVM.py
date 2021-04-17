@@ -34,12 +34,13 @@ def rbf_kernel(row_data, col_data, sigma):
     :rtype: ndarray
     """
     # Implement RBF kernel
-    coefficient = -1/(2 * sigma ** 2)
-    term_one = np.sum(row_data ** 2, 0, keepdims=True).T
-    term_two = np.sum(col_data ** 2, 0, keepdims=True)
-    term_three = -2 * row_data.T.dot(col_data)
+   # coefficient = -1/(2 * sigma ** 2)
+    #term_one = np.sum(row_data ** 2, 0, keepdims=True).T
+    #term_two = np.sum(col_data ** 2, 0, keepdims=True)
+    #term_three = -2 * row_data.T.dot(col_data)
     
-    return np.exp(coefficient * (term_one + term_two + term_three))
+   # return np.exp(coefficient * (term_one + term_two + term_three))
+     return np.exp((-1/(2*sigma**2))*(np.diag(col_data.T.dot(col_data)).reshape(-1,1).T + (np.diag(row_data.T.dot(row_data)).reshape(-1,1) - (2*row_data.T.dot(col_data))[:,:])[:,:]))
 
 def linear_kernel(row_data, col_data):
     """
