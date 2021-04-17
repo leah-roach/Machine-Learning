@@ -2,6 +2,7 @@
 #Pretty much copied and pasted the code from kernelsvm.py
 import numpy as np
 from quadprog_wrapper import solve_quadprog
+from sklearn import preprocessing
 
 def polynomial_kernel(row_data, col_data, order):
     """
@@ -34,13 +35,13 @@ def rbf_kernel(row_data, col_data, sigma):
     :rtype: ndarray
     """
     # Implement RBF kernel
-   # coefficient = -1/(2 * sigma ** 2)
-    #term_one = np.sum(row_data ** 2, 0, keepdims=True).T
-    #term_two = np.sum(col_data ** 2, 0, keepdims=True)
-    #term_three = -2 * row_data.T.dot(col_data)
+    coefficient = -1/(2 * sigma ** 2)
+    term_one = np.sum(row_data ** 2, 0, keepdims=True).T
+    term_two = np.sum(col_data ** 2, 0, keepdims=True)
+    term_three = -2 * row_data.T.dot(col_data)
     
-   # return np.exp(coefficient * (term_one + term_two + term_three))
-     return np.exp((-1/(2*sigma**2))*(np.diag(col_data.T.dot(col_data)).reshape(-1,1).T + (np.diag(row_data.T.dot(row_data)).reshape(-1,1) - (2*row_data.T.dot(col_data))[:,:])[:,:]))
+    return np.exp(coefficient * (term_one + term_two + term_three))
+    # return np.exp((-1/(2*sigma**2))*(np.diag(col_data.T.dot(col_data)).reshape(-1,1).T + (np.diag(row_data.T.dot(row_data)).reshape(-1,1) - (2*row_data.T.dot(col_data))[:,:])[:,:]))
 
 def linear_kernel(row_data, col_data):
     """
@@ -81,14 +82,12 @@ def kernel_svm_train(data, labels, params):
     gram_matrix = (gram_matrix + gram_matrix.T) / 2 # A + A^T = B then A= B/2 which is why end up with sae matrix
 
     n = gram_matrix.shape[0]
-
     # Setting up the inputs to the quadratic programming solver that solves:
     # minimize      0.5 x^T (hessian) x - (weights)^T x #the x's are the alphas I'm guessing, however, don't understand (weights)^T x part?
     #it is because the weights is a vector of 1s and, therefore, is basically subtracting the alphas 
     # subject to    (eq_coeffs) x = (eq_constants) #this condition is summation (alpha * y) = 0
     #   and         (lower_bounds) <= x <= (upper_bounds) #provides bounds on alpha as using a soft margin or slack?
     hessian = np.outer(labels, labels) * gram_matrix #basically the yi *yj * Kernel(xi,xj) part (i think it includes weights as well?)
-
     weights = np.ones(n)
 
     eq_coeffs = np.zeros((1, n))
@@ -152,7 +151,6 @@ def kernel_svm_predict(data, model):
     scores = gram_matrix.dot(
         model['alphas'] * model['sv_labels']) + model['bias']
     scores = scores.ravel()
-
     labels = 2 * (scores > 0) - 1  # threshold and map to {-1, 1}
 
     return labels, scores
