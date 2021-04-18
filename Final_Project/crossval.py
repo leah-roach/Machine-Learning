@@ -2,7 +2,7 @@
 import numpy as np
 
 
-def cross_validate(trainer, predictor, all_data, all_labels, folds, params):
+def cross_validate(trainer, predictor, data, all_labels, folds, params):
     """
     Performs cross validation with random splits
     
@@ -23,7 +23,7 @@ def cross_validate(trainer, predictor, all_data, all_labels, folds, params):
     :return: tuple containing the average score and the learned models from each fold
     :rtype: tuple
     """
-
+    all_data = data.T
     scores = np.zeros(folds)
 
     d, n = all_data.shape
@@ -55,7 +55,7 @@ def cross_validate(trainer, predictor, all_data, all_labels, folds, params):
         train_data = all_data[:, train_indices]
         train_labels = all_labels[train_indices]
 
-        model = trainer(train_data, train_labels, params)
+        model = trainer(train_data.T, train_labels, params)
 
         predictions = predictor(val_data, model)
         if isinstance(predictions, tuple):
