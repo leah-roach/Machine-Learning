@@ -1,7 +1,6 @@
-#File for SVM code
-#Pretty much copied and pasted the code from kernelsvm.py
 import numpy as np
 from quadprog_wrapper import solve_quadprog
+from sklearn import preprocessing
 from sklearn import preprocessing
 
 def polynomial_kernel(row_data, col_data, order):
@@ -41,7 +40,6 @@ def rbf_kernel(row_data, col_data, sigma):
     term_three = -2 * row_data.T.dot(col_data)
     
     return np.exp(coefficient * (term_one + term_two + term_three))
-    # return np.exp((-1/(2*sigma**2))*(np.diag(col_data.T.dot(col_data)).reshape(-1,1).T + (np.diag(row_data.T.dot(row_data)).reshape(-1,1) - (2*row_data.T.dot(col_data))[:,:])[:,:]))
 
 def linear_kernel(row_data, col_data):
     """
@@ -55,6 +53,21 @@ def linear_kernel(row_data, col_data):
     :rtype: ndarray
     """
     return row_data.T.dot(col_data)
+
+def fit(data, labels, params, print_output=False):
+    num_classes = len(np.unique(labels))
+    models = []
+    for i in range(num_classes):
+        indices = np.where(labels==i)[0]
+
+        masked_labels = np.full(labels.shape, -1)
+        masked_labels[indices] = 1
+        
+        normalized_data = preprocessing.normalize(data)
+        models.append(kernel_svm_train(normalized_data.T, masked_labels, params))
+        if(print_output):
+            print("Finished fitting binary model {0}".format(i))
+    return models
 
 def kernel_svm_train(data, labels, params):
     """
@@ -70,6 +83,7 @@ def kernel_svm_train(data, labels, params):
     :return: learned SVM model containing 'support_vectors', 'sv_labels', 'alphas', 'params'
     :rtype: dict
     """
+
     if params['kernel'] == 'rbf':
         gram_matrix = rbf_kernel(data, data, params['sigma'])
     elif params['kernel'] == 'polynomial':
@@ -123,7 +137,7 @@ def kernel_svm_train(data, labels, params):
     return model
 
 
-def kernel_svm_predict(data, model):
+def predict(data, model):
     """
     Predict binary-class labels for a batch of test points
 
@@ -134,22 +148,25 @@ def kernel_svm_predict(data, model):
     :return: array of +1 or -1 labels
     :rtype: array
     """
-    if model['params']['kernel'] == 'rbf':
-        gram_matrix = rbf_kernel(
-            data, model['support_vectors'], model['params']['sigma'])
-    elif model['params']['kernel'] == 'polynomial':
-        gram_matrix = polynomial_kernel(
-            data, model['support_vectors'], model['params']['order'])
-    else:
-        # use a linear kernel by default
-        gram_matrix = linear_kernel(data, model['support_vectors']) #appears to be passing the data points that are support vectors from the model (not exactly sure why it is passing this in)
+    all_scores = []
+    for i in range(len(model)):
+        if model[i]['params']['kernel'] == 'rbf':
+            gram_matrix = rbf_kernel(
+                data, model[i]['support_vectors'], model[i]['params']['sigma'])
+        elif model[i]['params']['kernel'] == 'polynomial':
+            gram_matrix = polynomial_kernel(
+                data, model[i]['support_vectors'], model[i]['params']['order'])
+        else:
+            # use a linear kernel by default
+            gram_matrix = linear_kernel(data, model[i]['support_vectors'])
 
-    scores = gram_matrix.dot(
-        model['alphas'] * model['sv_labels']) + model['bias']
-    scores = scores.ravel()
-    labels = 2 * (scores > 0) - 1  # threshold and map to {-1, 1}
+        scores = gram_matrix.dot(
+            model[i]['alphas'] * model[i]['sv_labels']) + model[i]['bias']
+        scores = scores.ravel()
+        all_scores.append(scores)
 
-    return labels, scores
+    labels = np.argmax(all_scores, axis=0)
+    return labels
 
 
     
