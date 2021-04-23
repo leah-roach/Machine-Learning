@@ -74,31 +74,13 @@ def knn_predict_L2_optimized(train, labels, test, k):
 def knn_predict_L1(train, labels, test_instance, k):
     num_test = test.shape[0]
     num_train = train.shape[0]
-    #use property that (a-b)^2 = a^2 - 2ab^T + b^2
-    #sum across axis 1 as summing rows
-    #train_sums is a 1x38000
     train_sums = np.sum(train, axis=1)
-    #expanded_training should have the shape (38,000 x 4,000)
-    #need to think about how i want to expand this 
     expanded_training = np.tile((train_sums),(num_test,1)).T
-    #instead
-    #want this to be
-    #test_sums is a 1x4000
     test_sums = np.sum(test, axis=1)
-    #want expanded_testing to be a 38,000x4000
     expanded_testing = np.tile(test_sums,(num_train,1))
-    middle_term = 2 * np.dot(train,test.T)
-    #(38,000x784)*(784,4000)
     dists = expanded_training - expanded_testing
-    #row corresponds of ith training vector distance from jth test vector 
-    #so want minimums along the columns 
-    #so want (38,000x4,000) or equivalently a
-    #so columns are test 
-    #apply np.argsort
-    optimal_locations = np.argsort(dists, axis=0)
-    #matrix of k-nearest neighbors 
+    optimal_locations = np.argsort(dists, axis=0) 
     k_matrix = optimal_locations[:k,:]
     k_matrix = labels[k_matrix[:,:]]
-    answer = np.argmax(np.bincount(k_matrix, axis=0))
-    #cannot think of a good way of mapping
+    answer = mode(k_matrix, axis=0)
     return answer
