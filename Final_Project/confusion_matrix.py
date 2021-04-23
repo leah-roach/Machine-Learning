@@ -1,10 +1,13 @@
 #code from https://medium.com/@dtuk81/confusion-matrix-visualization-fc31e3f30fea
+#with addition of F1score for multiclassification
+#can add precision and recall using sklearn
 
+from sklearn.metrics import f1_score, precision_score, recall_score
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def make_confusion_matrix(cf,
+def make_confusion_matrix(cf, label_test, predictions, 
                           group_names=None,
                           categories='auto',
                           count=True,
@@ -61,20 +64,24 @@ def make_confusion_matrix(cf,
 
 
     # CODE TO GENERATE SUMMARY STATISTICS & TEXT FOR SUMMARY STATS
+    #Is there way to
+    
     if sum_stats:
         #Accuracy is sum of diagonal divided by total observations
         accuracy  = np.trace(cf) / float(np.sum(cf))
-
+        #calculate f1 score using macro average
+        score = f1_score(label_test, predictions, average='macro')
         #if it is a binary confusion matrix, show some more stats
         if len(cf)==2:
             #Metrics for Binary Confusion Matrices
             precision = cf[1,1] / sum(cf[:,1])
             recall    = cf[1,1] / sum(cf[1,:])
-            f1_score  = 2*precision*recall / (precision + recall)
+            
+            f_score  = 2*precision*recall / (precision + recall)
             stats_text = "\n\nAccuracy={:0.3f}\nPrecision={:0.3f}\nRecall={:0.3f}\nF1 Score={:0.3f}".format(
-                accuracy,precision,recall,f1_score)
+                accuracy,precision,recall,f_score)
         else:
-            stats_text = "\n\nAccuracy={:0.3f}".format(accuracy)
+            stats_text = "\n\nAccuracy={:0.6f}\nF1 Score = {:0.6f}".format(accuracy, score)
     else:
         stats_text = ""
 
