@@ -1,43 +1,29 @@
 #Attempt to write the KNN from scratch
-#Used https://towardsdatascience.com/lets-make-a-knn-classifier-from-scratch-e73c43da346d for some basic inspiration 
-#Is a bit slow
+#levearge scipy for l1 and Minkowski calculations
 
 import numpy as np
 from scipy.stats import mode
+from scipy.spatial.distance import cdist
 
 
 
 #KNN using Minkowsky norm
-def knn_predict_Minkowsky(train, labels, test_instance, k, order):
-    sq_diff = (test_instance.reshape(-1,1).T-train[:,:])**order
-    #takes the row sum 
-    distances = sq_diff.sum(axis=1)
-    #sort labels from least to greatest 
-    neighbors = np.argsort(distances)
-    #take the k closest labels (not sure if this is inclusive or exclusive?)
-    kneighbors = neighbors[0:k]
-    correct_labels = labels[kneighbors]
-    return np.bincount(correct_labels).argmax()
+#leverage scipy cdist for efficient computation 
+def knn_predict_Minkowski(train, labels, test, k, order):
+    dists = cdist(train, test, 'minkowski', p=order)
+    optimal_locations = np.argsort(dists, axis=0) 
+    k_matrix = optimal_locations[:k,:]
+    k_matrix = labels[k_matrix[:,:]]
+    answer = mode(k_matrix, axis=0)
+    return answer
 
 
-#KNN using Euclidean norm
-def knn_predict_L2(train, labels, test_instance, k):
-    #obtain the squared distance 
-    sq_diff = (test_instance.reshape(-1,1).T-train[:,:])**2
-    #takes the row sum 
-    distances = sq_diff.sum(axis=1)
-    #sort labels from least to greatest 
-    neighbors = np.argsort(distances)
-    #take the k closest labels (not sure if this is inclusive or exclusive?)
-    kneighbors = neighbors[0:k]
-    correct_labels = labels[kneighbors]
-    return np.bincount(correct_labels).argmax()
-
-#numpy only L2 KNN 
-def knn_predict_L2_optimized(train, labels, test, k):
+#numpy only squared distance KNN 
+#use property that (a-b)^2 = a^2 - 2ab^T + b^2 where a and b are vectors
+#takes advantage of np.dot 
+def knn_predict_L2(train, labels, test, k):
     num_test = test.shape[0]
     num_train = train.shape[0]
-    #use property that (a-b)^2 = a^2 - 2ab^T + b^2
     squared_test = test**2
     squared_train = train**2
     #sum across axis 1 as summing rows
@@ -65,20 +51,16 @@ def knn_predict_L2_optimized(train, labels, test, k):
     k_matrix = optimal_locations[:k,:]
     k_matrix = labels[k_matrix[:,:]]
     answer = mode(k_matrix, axis=0)
-    #cannot think of a good way of mapping
     return answer
 
 
 
-#KNN using L1 norm
-def knn_predict_L1(train, labels, test_instance, k):
+#KNN using L1 norm (manhattan/cityblock)
+#leverage sci-py spatial distance library for optimization
+def knn_predict_L1(train, labels, test, k):
     num_test = test.shape[0]
     num_train = train.shape[0]
-    train_sums = np.sum(train, axis=1)
-    expanded_training = np.tile((train_sums),(num_test,1)).T
-    test_sums = np.sum(test, axis=1)
-    expanded_testing = np.tile(test_sums,(num_train,1))
-    dists = expanded_training - expanded_testing
+    dists = cdist(train,test, metric='cityblock')
     optimal_locations = np.argsort(dists, axis=0) 
     k_matrix = optimal_locations[:k,:]
     k_matrix = labels[k_matrix[:,:]]
