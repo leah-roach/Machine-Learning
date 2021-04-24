@@ -52,15 +52,13 @@ def KNN_cross_validate(predictor, data, all_labels, folds, k):
         train_data = all_data[:, train_indices]
         train_labels = all_labels[train_indices]
         train_data = train_data.T
-        predictions = predictor(train_data, train_labels, val_data.T, k)
+        predictions = predictor(train_data, train_labels, val_data.T, int(k))
         if isinstance(predictions, tuple):
             predictions = predictions[0]
 
         #models.append(model)
 
         scores[i] = np.mean(predictions == val_labels)
-
     score = np.mean(scores)
-
     return score
 
