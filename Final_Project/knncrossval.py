@@ -1,7 +1,5 @@
-
-#uses Minkowsi as that is generalized
-#still need to think about how to fully implement this 
-def KNN_cross_validate(predictor, data, all_labels, folds, order):
+import numpy as np
+def KNN_cross_validate(predictor, data, all_labels, folds, k):
     """
     Performs cross validation with random splits
     
@@ -39,8 +37,6 @@ def KNN_cross_validate(predictor, data, all_labels, folds, order):
     indices = indices.reshape((examples_per_fold, folds))
 
     models = []
-    
-    (train, labels, test, k, order):
 
     for i in range(folds):
         train_indices = np.delete(indices, i, 1).ravel()
@@ -55,18 +51,16 @@ def KNN_cross_validate(predictor, data, all_labels, folds, order):
 
         train_data = all_data[:, train_indices]
         train_labels = all_labels[train_indices]
-
-        model = predictor(train_data.T, train_labels, val_data, order)
-
-        predictions = predictor(val_data, model)
+        train_data = train_data.T
+        predictions = predictor(train_data, train_labels, val_data.T, k)
         if isinstance(predictions, tuple):
             predictions = predictions[0]
 
-        models.append(model)
+        #models.append(model)
 
         scores[i] = np.mean(predictions == val_labels)
 
     score = np.mean(scores)
 
-    return score, models
+    return score
 
