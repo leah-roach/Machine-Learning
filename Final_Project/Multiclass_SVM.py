@@ -63,7 +63,8 @@ def fit(data, labels, params, print_output=False):
         masked_labels = np.full(labels.shape, -1)
         masked_labels[indices] = 1
         
-        normalized_data = preprocessing.normalize(data)
+        #normalized_data = preprocessing.normalize(data)
+        normalized_data = data
         models.append(kernel_svm_train(normalized_data.T, masked_labels, params))
         if(print_output):
             print("Finished fitting binary model {0}".format(i))
