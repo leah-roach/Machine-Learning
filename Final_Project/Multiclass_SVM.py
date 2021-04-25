@@ -2,6 +2,8 @@ import numpy as np
 from quadprog_wrapper import solve_quadprog
 from sklearn import preprocessing
 from sklearn import preprocessing
+import matplotlib.pyplot as plt
+from plotutils import plot_data, plot_surface
 
 def polynomial_kernel(row_data, col_data, order):
     """
@@ -68,8 +70,10 @@ def fit(data, labels, params, print_output=False):
             normalized_data = preprocessing.normalize(data)
         
         models.append(kernel_svm_train(normalized_data.T, masked_labels, params))
+
         if(print_output):
             print("Finished fitting binary model {0}".format(i))
+
     return models
 
 def kernel_svm_train(data, labels, params):
