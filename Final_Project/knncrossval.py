@@ -1,5 +1,5 @@
 import numpy as np
-def KNN_cross_validate(predictor, data, all_labels, folds, k):
+def KNN_cross_validate(predictor, data, all_labels, folds, k, order):
     """
     Performs cross validation with random splits
     
@@ -52,7 +52,7 @@ def KNN_cross_validate(predictor, data, all_labels, folds, k):
         train_data = all_data[:, train_indices]
         train_labels = all_labels[train_indices]
         train_data = train_data.T
-        predictions = predictor(train_data, train_labels, val_data.T, int(k))
+        predictions = predictor(train_data, train_labels, val_data.T, int(k), int(order))
         if isinstance(predictions, tuple):
             predictions = predictions[0]
 

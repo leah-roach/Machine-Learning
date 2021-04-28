@@ -21,7 +21,7 @@ def knn_predict_Minkowski(train, labels, test, k, order):
 #numpy only squared distance KNN 
 #use property that (a-b)^2 = a^2 - 2ab^T + b^2 where a and b are vectors
 #takes advantage of np.dot 
-def knn_predict_L2(train, labels, test, k):
+def knn_predict_L2(train, labels, test, k, order):
     num_test = test.shape[0]
     num_train = train.shape[0]
     squared_test = test**2
@@ -57,7 +57,7 @@ def knn_predict_L2(train, labels, test, k):
 
 #KNN using L1 norm (manhattan/cityblock)
 #leverage sci-py spatial distance library for optimization
-def knn_predict_L1(train, labels, test, k):
+def knn_predict_L1(train, labels, test, k, order):
     num_test = test.shape[0]
     num_train = train.shape[0]
     dists = cdist(train,test, metric='cityblock')
