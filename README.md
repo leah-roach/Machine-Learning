@@ -1,8 +1,8 @@
 # Machine-Learning
 Final Project by:
-Leah Roach, leah8, leah8@vt.edu
-Sean Copenhaver
-Nicholas Frankenberg
+Leah Roach (leah8),
+Sean Copenhaver,
+Nicholas Frankenberg,
 
 
 SVM: 
