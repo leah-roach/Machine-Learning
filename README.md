@@ -4,6 +4,10 @@ Leah Roach (leah8),
 Sean Copenhaver (smc7),
 Nicholas Frankenberg (nicholascf),
 
+REQUIRED PACKAGES: 
+
+quadprog (pip install quadprog)
+scikit-image (pip install scikit-image)
 
 SVM: 
 
