@@ -1,8 +1,8 @@
 # Machine-Learning
 Final Project by:
 Leah Roach (leah8),
-Sean Copenhaver,
-Nicholas Frankenberg,
+Sean Copenhaver (smc7),
+Nicholas Frankenberg (nicholascf),
 
 
 SVM: 
